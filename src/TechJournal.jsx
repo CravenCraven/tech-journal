@@ -1,10 +1,16 @@
-import { useState, useMemo, useCallback, useRef } from "react";
+import { useState, useMemo, useCallback, useRef, useEffect } from "react";
 
 const THEMES = {
   sysadmin: { label: "Sysadmin", color: "#00ff41", icon: "🖥️", bg: "rgba(0,255,65,0.08)", border: "rgba(0,255,65,0.25)" },
   devops: { label: "DevOps", color: "#00d4ff", icon: "⚙️", bg: "rgba(0,212,255,0.08)", border: "rgba(0,212,255,0.25)" },
   kali: { label: "Kali Linux", color: "#ff3e6c", icon: "💀", bg: "rgba(255,62,108,0.08)", border: "rgba(255,62,108,0.25)" },
   hackerbox: { label: "HackerBox", color: "#b44aff", icon: "🔌", bg: "rgba(180,74,255,0.08)", border: "rgba(180,74,255,0.25)" },
+};
+
+const CONTACT = {
+  email: "craventhegreat@gmail.com",
+  github: "https://github.com/CravenCraven",
+  linkedin: "https://www.linkedin.com/in/craven-craven-43b813a8",
 };
 
 const SORT_OPTIONS = [
@@ -25,6 +31,7 @@ const SAMPLE = [
 ];
 
 const STORAGE_KEY = 'tech-journal-entries';
+const ADMIN_KEY = 'tech-journal-admin';
 
 function loadEntries() {
   try {
@@ -88,6 +95,22 @@ function StatusDot({ status }) {
 
 function StatCard({ label, value, color, sub }) {
   return <div style={{ background:"rgba(255,255,255,0.03)", border:"1px solid #2a2a2a", borderRadius:8, padding:"16px 20px", flex:"1 1 130px", minWidth:130 }}><div style={{ fontSize:28, fontWeight:700, color, fontFamily:"'Fira Code',monospace" }}>{value}</div><div style={{ fontSize:13, color:"#888", marginTop:4 }}>{label}</div>{sub&&<div style={{ fontSize:11, color:"#555", marginTop:4 }}>{sub}</div>}</div>;
+}
+
+function ContactBar() {
+  return (
+    <div style={{ display:"flex", flexWrap:"wrap", gap:16, alignItems:"center", justifyContent:"center", padding:"20px 0 8px", borderTop:"1px solid #1a1a1a", marginTop:24 }}>
+      <a href={`mailto:${CONTACT.email}`} style={{ color:"#888", fontSize:12, fontFamily:"'Fira Code',monospace", textDecoration:"none", transition:"color 0.2s" }} onMouseEnter={e=>e.target.style.color="#00ff41"} onMouseLeave={e=>e.target.style.color="#888"}>
+        {CONTACT.email}
+      </a>
+      <a href={CONTACT.github} target="_blank" rel="noopener noreferrer" style={{ color:"#888", fontSize:12, fontFamily:"'Fira Code',monospace", textDecoration:"none", transition:"color 0.2s" }} onMouseEnter={e=>e.target.style.color="#00d4ff"} onMouseLeave={e=>e.target.style.color="#888"}>
+        GitHub
+      </a>
+      <a href={CONTACT.linkedin} target="_blank" rel="noopener noreferrer" style={{ color:"#888", fontSize:12, fontFamily:"'Fira Code',monospace", textDecoration:"none", transition:"color 0.2s" }} onMouseEnter={e=>e.target.style.color="#00d4ff"} onMouseLeave={e=>e.target.style.color="#888"}>
+        LinkedIn
+      </a>
+    </div>
+  );
 }
 
 function exportMd(e) {
@@ -214,6 +237,15 @@ export default function TechJournal() {
   const [editTarget, setEditTarget] = useState(null);
   const [delConfirm, setDelConfirm] = useState(null);
   const [exportNotice, setExportNotice] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(()=>{ try { return localStorage.getItem(ADMIN_KEY)==='true'; } catch { return false; } });
+
+  const toggleAdmin = useCallback(()=>{
+    setIsAdmin(prev => {
+      const next = !prev;
+      try { localStorage.setItem(ADMIN_KEY, next ? 'true' : 'false'); } catch {}
+      return next;
+    });
+  },[]);
 
   const nextId = useMemo(()=>Math.max(0,...entries.map(e=>e.id))+1,[entries]);
 
@@ -281,7 +313,7 @@ export default function TechJournal() {
         <div style={{ maxWidth:800, margin:"0 auto", padding:"20px 16px" }}>
           <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:8, marginBottom:20 }}>
             <button onClick={()=>{setSelected(null);setDelConfirm(null);}} style={{ background:"none", border:"1px solid #333", color:"#888", padding:"6px 16px", borderRadius:6, cursor:"pointer", fontFamily:"'Fira Code',monospace", fontSize:12 }}>← BACK</button>
-            <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+            {isAdmin && <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
               <button onClick={()=>togglePin(e.id)} style={{ background:e.pinned?"rgba(255,170,0,0.1)":"transparent", border:`1px solid ${e.pinned?"rgba(255,170,0,0.3)":"#333"}`, color:e.pinned?"#ffaa00":"#666", padding:"6px 14px", borderRadius:6, cursor:"pointer", fontFamily:"'Fira Code',monospace", fontSize:12, fontWeight:600 }}>{e.pinned?"★ PINNED":"☆ PIN"}</button>
               <button onClick={()=>handleExport(e)} style={{ background:"rgba(0,255,65,0.08)", border:"1px solid rgba(0,255,65,0.25)", color:"#00ff41", padding:"6px 14px", borderRadius:6, cursor:"pointer", fontFamily:"'Fira Code',monospace", fontSize:12, fontWeight:600 }}>EXPORT .MD</button>
               <button onClick={()=>{setEditTarget(e);setFormMode("edit");}} style={{ background:"rgba(0,212,255,0.08)", border:"1px solid rgba(0,212,255,0.25)", color:"#00d4ff", padding:"6px 14px", borderRadius:6, cursor:"pointer", fontFamily:"'Fira Code',monospace", fontSize:12, fontWeight:600 }}>EDIT</button>
@@ -290,7 +322,7 @@ export default function TechJournal() {
                 <button onClick={()=>handleDelete(e.id)} style={{ background:"rgba(255,62,108,0.15)", border:"1px solid rgba(255,62,108,0.4)", color:"#ff3e6c", padding:"5px 12px", borderRadius:6, cursor:"pointer", fontFamily:"'Fira Code',monospace", fontSize:11, fontWeight:700 }}>YES</button>
                 <button onClick={()=>setDelConfirm(null)} style={{ background:"none", border:"1px solid #333", color:"#888", padding:"5px 12px", borderRadius:6, cursor:"pointer", fontFamily:"'Fira Code',monospace", fontSize:11 }}>NO</button>
               </div> : <button onClick={()=>setDelConfirm(e.id)} style={{ background:"rgba(255,62,108,0.08)", border:"1px solid rgba(255,62,108,0.25)", color:"#ff3e6c", padding:"6px 14px", borderRadius:6, cursor:"pointer", fontFamily:"'Fira Code',monospace", fontSize:12, fontWeight:600 }}>DELETE</button>}
-            </div>
+            </div>}
           </div>
 
           {exportNotice && <div style={{ background:"rgba(0,255,65,0.08)", border:"1px solid rgba(0,255,65,0.2)", borderRadius:6, padding:"8px 14px", marginBottom:16, fontSize:12, color:"#00ff41", fontFamily:"'Fira Code',monospace" }}>Exported "{slug(e.title)}.md" — check your downloads.</div>}
@@ -333,10 +365,17 @@ export default function TechJournal() {
             <h1 style={{ fontSize:24, fontWeight:700, color:"#00ff41", fontFamily:"'Fira Code',monospace", margin:0, textShadow:"0 0 20px rgba(0,255,65,0.3)" }}>&gt;_ tech_journal</h1>
             <p style={{ color:"#555", fontSize:13, margin:"4px 0 0", fontFamily:"'Fira Code',monospace" }}>sysadmin · devops · offensive security · hackerbox</p>
           </div>
-          <div style={{ display:"flex", gap:6 }}>
+          <div style={{ display:"flex", gap:6, alignItems:"center" }}>
+            {/* Hidden admin toggle — looks like a tiny dot, only you know it's there */}
+            <button onClick={toggleAdmin} style={{ width:8, height:8, borderRadius:"50%", background:isAdmin?"#00ff41":"#1a1a1a", border:"none", cursor:"pointer", padding:0, opacity:isAdmin?1:0.3, transition:"all 0.3s" }} title=""/>
             {["dashboard","entries"].map(v=><button key={v} onClick={()=>setView(v)} style={{ background:view===v?"rgba(0,255,65,0.12)":"transparent", border:`1px solid ${view===v?"#00ff41":"#333"}`, color:view===v?"#00ff41":"#666", padding:"6px 14px", borderRadius:6, cursor:"pointer", fontFamily:"'Fira Code',monospace", fontSize:12, fontWeight:600 }}>{v.toUpperCase()}</button>)}
           </div>
         </div>
+
+        {isAdmin && <div style={{ background:"rgba(0,255,65,0.05)", border:"1px solid rgba(0,255,65,0.15)", borderRadius:6, padding:"6px 12px", marginBottom:16, fontSize:11, color:"#00ff41", fontFamily:"'Fira Code',monospace", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <span>ADMIN MODE — editing enabled</span>
+          <button onClick={toggleAdmin} style={{ background:"none", border:"1px solid rgba(0,255,65,0.2)", color:"#00ff41", padding:"2px 8px", borderRadius:4, cursor:"pointer", fontFamily:"'Fira Code',monospace", fontSize:10 }}>LOCK</button>
+        </div>}
 
         {view==="dashboard" && <div style={{ marginBottom:28 }}>
           <div style={{ display:"flex", flexWrap:"wrap", gap:12, marginBottom:20 }}>
@@ -364,11 +403,11 @@ export default function TechJournal() {
             <span style={{ fontSize:11, color:"#444", fontFamily:"'Fira Code',monospace", marginRight:2 }}>Sort:</span>
             {SORT_OPTIONS.map(s=><button key={s.key} onClick={()=>setSortBy(s.key)} style={{ background:sortBy===s.key?"rgba(0,255,65,0.1)":"transparent", border:`1px solid ${sortBy===s.key?"rgba(0,255,65,0.25)":"#2a2a2a"}`, color:sortBy===s.key?"#00ff41":"#555", padding:"4px 10px", borderRadius:4, cursor:"pointer", fontFamily:"'Fira Code',monospace", fontSize:10, fontWeight:600 }}>{s.label}</button>)}
           </div>
-          <button onClick={()=>setFormMode("create")} style={{ background:"rgba(0,255,65,0.1)", border:"1px solid rgba(0,255,65,0.3)", color:"#00ff41", padding:"8px 18px", borderRadius:6, cursor:"pointer", fontFamily:"'Fira Code',monospace", fontSize:12, fontWeight:700, whiteSpace:"nowrap", textShadow:"0 0 10px rgba(0,255,65,0.3)" }}>+ NEW ENTRY</button>
+          {isAdmin && <button onClick={()=>setFormMode("create")} style={{ background:"rgba(0,255,65,0.1)", border:"1px solid rgba(0,255,65,0.3)", color:"#00ff41", padding:"8px 18px", borderRadius:6, cursor:"pointer", fontFamily:"'Fira Code',monospace", fontSize:12, fontWeight:700, whiteSpace:"nowrap", textShadow:"0 0 10px rgba(0,255,65,0.3)" }}>+ NEW ENTRY</button>}
         </div>
 
         <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-          {filtered.length===0 && <div style={{ textAlign:"center", padding:40, color:"#444", fontFamily:"'Fira Code',monospace", fontSize:13 }}>{search?"No entries match your search.":"No entries yet. Create your first one!"}</div>}
+          {filtered.length===0 && <div style={{ textAlign:"center", padding:40, color:"#444", fontFamily:"'Fira Code',monospace", fontSize:13 }}>{search?"No entries match your search.":"No entries yet."}</div>}
           {filtered.map((e,idx)=>{
             const t=THEMES[e.theme], hasImgs=e.screenshots?.length>0;
             const showPinDivider = e.pinned && (idx===0 || !filtered[idx-1]?.pinned);
@@ -400,7 +439,8 @@ export default function TechJournal() {
           })}
         </div>
 
-        <div style={{ textAlign:"center", padding:"32px 0 16px", color:"#2a2a2a", fontSize:11, fontFamily:"'Fira Code',monospace" }}>tech_journal v3.1 · {entries.length} entries logged</div>
+        <ContactBar/>
+        <div style={{ textAlign:"center", padding:"12px 0 16px", color:"#2a2a2a", fontSize:11, fontFamily:"'Fira Code',monospace" }}>tech_journal v3.2 · {entries.length} entries logged</div>
       </div>
     </div>
   );
