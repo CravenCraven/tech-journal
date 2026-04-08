@@ -24,6 +24,20 @@ const SAMPLE = [
   { id:7, theme:"hackerbox", status:"complete", pinned:false, title:"HackerBox 0097: LED Matrix with Arduino Nano", date:"2026-04-01", objective:"Complete HackerBox 0097 kit — practice through-hole soldering, get 8x8 LED matrix working.", environment:"HackerBox 0097 kit, Arduino Nano, Hakko FX-888D, Arduino IDE", steps:"1. Inventoried components\n2. Soldered pin headers onto Nano\n3. Soldered MAX7219 driver circuit\n4. Connected LED matrix\n5. Loaded LedControl library\n6. Uploaded test pattern\n7. Custom pixel art animations", codeBlocks:"#include <LedControl.h>\n\nLedControl lc = LedControl(12, 11, 10, 1);\n\nvoid setup() {\n  lc.shutdown(0, false);\n  lc.setIntensity(0, 8);\n  lc.clearDisplay(0);\n}\n\nvoid loop() {\n  byte smile[] = {\n    B00111100, B01000010, B10100101, B10000001,\n    B10100101, B10011001, B01000010, B00111100\n  };\n  for (int i = 0; i < 8; i++) lc.setRow(0, i, smile[i]);\n  delay(2000);\n}", errors:"Cold solder joint on CS pin — matrix flickering. Reflowed with fresh solder.", outcome:"LED matrix works. Soldering improved noticeably.", takeaways:"Cold joints are #1 beginner issue. MAX7219 makes LED matrices trivial.", references:"HackerBox 0097 instructions, LedControl docs", screenshots:[] },
 ];
 
+const STORAGE_KEY = 'tech-journal-entries';
+
+function loadEntries() {
+  try {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) return JSON.parse(saved);
+  } catch {}
+  return SAMPLE;
+}
+
+function persistEntries(entries) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(entries)); } catch {}
+}
+
 const EMPTY = { title:"", theme:"sysadmin", status:"draft", pinned:false, date:new Date().toISOString().split("T")[0], objective:"", environment:"", steps:"", codeBlocks:"", errors:"", outcome:"", takeaways:"", references:"", screenshots:[] };
 
 const FIELDS = [
@@ -190,7 +204,7 @@ function EntryForm({ initial, onSave, onCancel, isEdit }) {
 }
 
 export default function TechJournal() {
-  const [entries, setEntries] = useState(SAMPLE);
+  const [entries, setEntries] = useState(loadEntries);
   const [activeTheme, setActiveTheme] = useState("all");
   const [view, setView] = useState("dashboard");
   const [selected, setSelected] = useState(null);
@@ -202,6 +216,14 @@ export default function TechJournal() {
   const [exportNotice, setExportNotice] = useState(false);
 
   const nextId = useMemo(()=>Math.max(0,...entries.map(e=>e.id))+1,[entries]);
+
+  const updateEntries = useCallback((fn) => {
+    setEntries(prev => {
+      const next = typeof fn === 'function' ? fn(prev) : fn;
+      persistEntries(next);
+      return next;
+    });
+  }, []);
 
   const themeCounts = useMemo(()=>{
     const c = { all:entries.length };
@@ -235,17 +257,17 @@ export default function TechJournal() {
   },[entries]);
 
   const togglePin = useCallback((id)=>{
-    setEntries(prev=>prev.map(e=>e.id===id?{...e,pinned:!e.pinned}:e));
+    updateEntries(prev=>prev.map(e=>e.id===id?{...e,pinned:!e.pinned}:e));
     setSelected(prev=>prev&&prev.id===id?{...prev,pinned:!prev.pinned}:prev);
-  },[]);
+  },[updateEntries]);
 
   const handleSave = useCallback(form=>{
-    if(formMode==="edit"&&editTarget){ setEntries(prev=>prev.map(e=>e.id===editTarget.id?{...form,id:editTarget.id}:e)); setSelected({...form,id:editTarget.id}); }
-    else { const ne={...form,id:nextId}; setEntries(prev=>[...prev,ne]); setSelected(ne); }
+    if(formMode==="edit"&&editTarget){ updateEntries(prev=>prev.map(e=>e.id===editTarget.id?{...form,id:editTarget.id}:e)); setSelected({...form,id:editTarget.id}); }
+    else { const ne={...form,id:nextId}; updateEntries(prev=>[...prev,ne]); setSelected(ne); }
     setFormMode(null); setEditTarget(null);
-  },[formMode,editTarget,nextId]);
+  },[formMode,editTarget,nextId,updateEntries]);
 
-  const handleDelete = useCallback(id=>{ setEntries(prev=>prev.filter(e=>e.id!==id)); setSelected(null); setDelConfirm(null); },[]);
+  const handleDelete = useCallback(id=>{ updateEntries(prev=>prev.filter(e=>e.id!==id)); setSelected(null); setDelConfirm(null); },[updateEntries]);
   const handleCancel = useCallback(()=>{ setFormMode(null); setEditTarget(null); },[]);
 
   const handleExport = useCallback(e=>{ exportMd(e); setExportNotice(true); setTimeout(()=>setExportNotice(false),2000); },[]);
@@ -378,7 +400,7 @@ export default function TechJournal() {
           })}
         </div>
 
-        <div style={{ textAlign:"center", padding:"32px 0 16px", color:"#2a2a2a", fontSize:11, fontFamily:"'Fira Code',monospace" }}>tech_journal v3.0 · {entries.length} entries logged</div>
+        <div style={{ textAlign:"center", padding:"32px 0 16px", color:"#2a2a2a", fontSize:11, fontFamily:"'Fira Code',monospace" }}>tech_journal v3.1 · {entries.length} entries logged</div>
       </div>
     </div>
   );
