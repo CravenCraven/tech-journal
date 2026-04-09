@@ -62,26 +62,33 @@ const fmtDate = d => new Date(d+"T00:00:00").toLocaleDateString("en-US",{month:"
 const daysAgo = d => Math.floor((new Date()-new Date(d+"T00:00:00"))/864e5);
 const slug = t => t.toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
 
-function CodeBlock({ children }) {
-  const [copied, setCopied] = useState(false);
-  const lines = (children||"").split("\n");
-  const copy = () => {
-    navigator.clipboard.writeText(children).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); }).catch(()=>{});
-  };
-  return (
-    <div style={{ position:"relative", background:"#0a0a0a", border:"1px solid #333", borderRadius:6, margin:"8px 0", overflow:"hidden" }}>
-      <button onClick={copy} style={{ position:"absolute", top:6, right:6, background:"rgba(255,255,255,0.06)", border:"1px solid #333", borderRadius:4, color:copied?"#00ff41":"#666", padding:"3px 10px", cursor:"pointer", fontFamily:"'Fira Code',monospace", fontSize:10, zIndex:2, transition:"all 0.2s" }}>
-        {copied ? "COPIED" : "COPY"}
-      </button>
-      <div style={{ display:"flex", overflowX:"auto" }}>
-        <div style={{ padding:"12px 0", minWidth:36, textAlign:"right", userSelect:"none", borderRight:"1px solid #222" }}>
-          {lines.map((_,i) => <div key={i} style={{ padding:"0 8px", fontSize:12, lineHeight:"1.6", color:"#333", fontFamily:"'Fira Code',monospace" }}>{i+1}</div>)}
-        </div>
-        <pre style={{ flex:1, padding:"12px 16px", margin:0, fontFamily:"'Fira Code','Courier New',monospace", fontSize:13, color:"#00ff41", lineHeight:1.6, whiteSpace:"pre-wrap", wordBreak:"break-all" }}>{children}</pre>
-      </div>
-    </div>
-  );
-}
+const COMMANDS = new Set(['ls','cd','cat','cp','mv','rm','mkdir','rmdir','touch','find','locate','ln','pwd','tree','chmod','chown','chgrp','umask','chage','passwd','setfacl','getfacl','useradd','userdel','usermod','groupadd','groupdel','groupmod','id','whoami','who','su','sudo','dnf','yum','rpm','apt','pip','npm','systemctl','service','journalctl','ps','top','htop','kill','killall','nice','renice','ip','ss','netstat','ping','curl','wget','dig','nslookup','traceroute','hostname','nmcli','firewall-cmd','mount','umount','lsblk','fdisk','mkfs','pvcreate','vgcreate','lvcreate','lvextend','vgextend','pvs','vgs','lvs','df','du','blkid','grep','awk','sed','cut','sort','uniq','wc','head','tail','less','more','diff','tr','tar','gzip','bzip2','zip','unzip','scp','rsync','sftp','uname','hostnamectl','timedatectl','free','uptime','vmstat','iostat','sar','dmesg','getenforce','setenforce','chcon','restorecon','setsebool','semanage','audit2why','audit2allow','docker','podman','kubectl','buildah','git','ansible','terraform','vagrant','jenkins','make','ssh','ssh-keygen','nmap','nikto','dirb','gobuster','hydra','john','hashcat','msfconsole','msfvenom','aircrack-ng','sqlmap','enum4linux','smbclient','crackmapexec','bloodhound','linpeas','responder','echo','printf','export','source','alias','history','man','which','whereis','date','cron','crontab','at','sleep','xargs','tee','visudo','chpasswd','newgrp','loginctl','resolvectl','nmtui','tcpdump','iptables','nft','parted','mkswap','swapon','swapoff','xfs_growfs','resize2fs','tune2fs','fsck','dd','modprobe','lsmod','dmidecode','lscpu','lspci','lsusb','logrotate','mailx','mutt','vi','vim','nano','egrep','fgrep','envsubst','jq','nc','socat','openssl']);
+
+const KEYWORDS = new Set(['if','then','else','elif','fi','for','do','done','while','until','case','esac','in','function','return','exit','break','continue','select','trap','shift','eval','exec','set','unset','readonly','local','declare','typeset']);
+
+function highlightLine(line) {
+  if (!line || !line.trim()) return [{ text: line || ' ', color: '#00ff41' }];
+  const trimmed = line.trimStart();
+  if (trimmed.startsWith('#')) return [{ text: line, color: '#666' }];
+  const tokens = [];
+  let remaining = line;
+  let isFirstWord = true;
+  while (remaining.length > 0) {
+    if (remaining[0] === ' ' || remaining[0] === '\t') {
+      let ws = '';
+      while (remaining.length > 0 && (remaining[0] === ' ' || remaining[0] === '\t')) { ws += remaining[0]; remaining = remaining.slice(1); }
+      tokens.push({ text: ws, color: '#00ff41' });
+      continue;
+    }
+    if (remaining[0] === '"' || remaining[0] === "'") {
+      const q = remaining[0]; let str = q; let j = 1;
+      while (j < remaining.length && remaining[j] !== q) { str += remaining[j]; j++; }
+      if (j < remaining.length) { str += remaining[j]; j++; }
+      tokens.push({ text: str, color: '#ffaa00' });
+      remaining = remaining.slice(j);
+      isFirstWord = false;
+      continue;
+
 
 function Badge({ theme, small }) {
   const t = THEMES[theme]; if(!t) return null;
