@@ -88,7 +88,62 @@ function highlightLine(line) {
       remaining = remaining.slice(j);
       isFirstWord = false;
       continue;
-
+  function CodeBlock({ children }) {
+const [copied, setCopied] = useState(false);
+const lines = (children||"").split("\n");
+const copy = () => {
+navigator.clipboard.writeText(children).then(() => { setCopied(true); setTimeout(() =>
+setCopied(false), 1500); }).catch(()=>{});
+};
+return (
+<div style={{ position:"relative"
+, background:"#0a0a0a"
+, border:"1px solid #333"
+,
+borderRadius:6, margin:"8px 0"
+, overflow:"hidden" }}>
+<button onClick={copy} style={{ position:"absolute"
+, top:6, right:6,
+background:"rgba(255,255,255,0.06)"
+, border:"1px solid #333"
+, borderRadius:4,
+color:copied?"#00ff41":"#666"
+, padding:"3px 10px"
+, cursor:"pointer"
+, fontFamily:"'Fira
+Code'
+,monospace"
+, fontSize:10, zIndex:2, transition:"all 0.2s" }}>
+{copied ? "COPIED" : "COPY"}
+</button>
+<div style={{ display:"flex"
+, overflowX:"auto" }}>
+<div style={{ padding:"12px 0"
+, minWidth:36, textAlign:"right"
+, userSelect:"none"
+,
+borderRight:"1px solid #222" }}>
+{lines.map((_,i) => <div key={i} style={{ padding:"0 8px"
+, fontSize:12, lineHeight:"1.6"
+,
+color:"#333"
+, fontFamily:"'Fira Code'
+,monospace" }}>{i+1}</div>)}
+</div>
+<pre style={{ flex:1, padding:"12px 16px"
+, margin:0, fontFamily:"'Fira Code'
+'Courier
+,
+New'
+,monospace"
+, fontSize:13, lineHeight:1.6, whiteSpace:"pre-wrap"
+, wordBreak:"break-all"
+}}>{lines.map((line,i) => <div key={i}>{highlightLine(line).map((tok,j) => <span key={j} style={{
+color:tok.color }}>{tok.text}</span>)}</div>)}</pre>
+</div>
+</div>
+);
+}  
 
 function Badge({ theme, small }) {
   const t = THEMES[theme]; if(!t) return null;
